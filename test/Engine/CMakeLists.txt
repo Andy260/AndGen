@@ -19,6 +19,8 @@ target_include_directories(AndGen_Engine_Tests
 
 # Add unit test source files within the Engine Tests directory
 target_sources(AndGen_Engine_Tests 
+	# Add main engine unit tests
+	PRIVATE "${CMAKE_CURRENT_LIST_DIR}/CommandLineArgumentsTests.cpp"
 	# Tests suit main
 	PUBLIC "${CMAKE_CURRENT_LIST_DIR}/main.cpp"
 )

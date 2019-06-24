@@ -13,6 +13,9 @@ target_include_directories(AndGen_Engine
 
 # Add source files to the build
 target_sources(AndGen_Engine 
+	# Add main engine source files to build
+	PUBLIC "${CMAKE_CURRENT_LIST_DIR}/CommandLineArguments.cpp"
+
 	# Add application main source file to build
 	PRIVATE "${CMAKE_CURRENT_LIST_DIR}/main.cpp"
 )
