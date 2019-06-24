@@ -1,12 +1,12 @@
 # Create Unit Test executable
-add_executable(AndGen_Editor_Tests)
-set_target_properties(AndGen_Editor_Tests
+add_executable(AndGen_Engine_Tests)
+set_target_properties(AndGen_Engine_Tests
 					  PROPERTIES 
-					  OUTPUT_NAME "AndGenEditorTests"
+					  OUTPUT_NAME "AndGenEngineTests"
 )
 
 # Add include directories
-target_include_directories(AndGen_Editor_Tests 
+target_include_directories(AndGen_Engine_Tests 
 	# Google Test includes
 	PRIVATE "${gtest_SOURCE_DIR}/include"
 	# Google Mock includes
@@ -18,15 +18,15 @@ target_include_directories(AndGen_Editor_Tests
 )
 
 # Add unit test source files within the Engine Tests directory
-target_sources(AndGen_Editor_Tests 
+target_sources(AndGen_Engine_Tests 
 	# Tests suit main
 	PUBLIC "${CMAKE_CURRENT_LIST_DIR}/main.cpp"
 )
 
 # Link unit test project to Google Test and Google Mock
-# and AndGen Editor
-target_link_libraries(AndGen_Editor_Tests gmock_main AndGen_Editor AndGen_Engine)
+# and AndGen Engine
+target_link_libraries(AndGen_Engine_Tests gmock_main AndGen_Engine)
 
-# Add Editor unit tests to CTest
-add_test(NAME    AndGen_Editor_Tests 
-		 COMMAND AndGen_Editor_Tests)
+# Add AndGen Engine unit tests to CTest
+add_test(NAME    AndGen_Engine_Tests 
+		 COMMAND AndGen_Engine_Tests)

@@ -18,7 +18,7 @@ option(BUILD_EDITOR_TESTS "Build Editor Tests" FALSE)
 #--------------------------------------------------------------------
 
 #--------------------------------------------------------------------
-# Project Folders
+# Project Folder Defines
 #--------------------------------------------------------------------
 # Define common CMake utility files
 set(UTILITY_DIR "${CMAKE_CURRENT_SOURCE_DIR}/CMake")
@@ -33,6 +33,12 @@ set(TEST_DIR "${CMAKE_CURRENT_SOURCE_DIR}/test")
 #--------------------------------------------------------------------
 
 #--------------------------------------------------------------------
+# CMake Modules
+#--------------------------------------------------------------------
+include(${UTILITY_DIR}/DownloadProject.cmake)
+#--------------------------------------------------------------------
+
+#--------------------------------------------------------------------
 # Project source
 #--------------------------------------------------------------------
 # Add source sub-directories
@@ -43,10 +49,18 @@ add_subdirectory("${SOURCE_DIR}/Editor")
 #--------------------------------------------------------------------
 # Project Tests
 #--------------------------------------------------------------------
+# Include Google Test and Google Mock
+if (BUILD_ENGINE_TESTS OR BUILD_EDITOR_TESTS)
+	include(CTest)
+	include("${UTILITY_DIR}/GoogleTest.cmake")
+endif()
+
+# AndGen Engine Tests
 if(BUILD_ENGINE_TESTS)
 	add_subdirectory("${TEST_DIR}/Engine")
 endif()
 
+# AndGen Edutor Tests
 if(BUILD_EDITOR_TESTS)
 	add_subdirectory("${TEST_DIR}/Editor")
 endif()

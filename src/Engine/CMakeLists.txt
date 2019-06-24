@@ -1,5 +1,9 @@
 # Create game engine library
 add_library(AndGen_Engine STATIC)
+set_target_properties(AndGen_Engine
+					  PROPERTIES 
+					  OUTPUT_NAME "AndGenEngine"
+)
 
 # Add include directories
 target_include_directories(AndGen_Engine 
