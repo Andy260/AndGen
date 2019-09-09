@@ -2,7 +2,7 @@
 #include <stdexcept>
 // AndGen Engine includes
 #include "AndGen/Engine/CommandLineArguments.hpp"
-#include "AndGen/Engine/Exceptions/NotImplementedException.hpp"
+#include "AndGen/Exceptions/NotImplementedException.hpp"
 
 AndGen::CommandLineArguments::CommandLineArguments(int argc, char* argv[])
 {

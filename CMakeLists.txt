@@ -1,9 +1,13 @@
 ﻿# CMakeList.txt : Primary CMake file for AndGen
 
-cmake_minimum_required (VERSION 3.0 FATAL_ERROR)
+cmake_minimum_required (VERSION 3.1 FATAL_ERROR)
 
 # Set-up project
 project(AndGen CXX C)
+# Specify and require C++17 with no extensions
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Set Project version project version
 set(VERSION_MAJOR 0)
@@ -36,6 +40,12 @@ set(TEST_DIR "${CMAKE_CURRENT_SOURCE_DIR}/test")
 # CMake Modules
 #--------------------------------------------------------------------
 include(${UTILITY_DIR}/DownloadProject.cmake)
+#--------------------------------------------------------------------
+
+#--------------------------------------------------------------------
+# Project dependencies
+#--------------------------------------------------------------------
+include("${UTILITY_DIR}/CTPL.cmake")
 #--------------------------------------------------------------------
 
 #--------------------------------------------------------------------

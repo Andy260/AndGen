@@ -7,7 +7,7 @@
 #include <vector>
 #include <string>
 // AndGen includes
-#include "AndGen/Engine/Exceptions/NotImplementedException.hpp"
+#include <AndGen/Exceptions/NotImplementedException.hpp>
 
 namespace AndGen
 {

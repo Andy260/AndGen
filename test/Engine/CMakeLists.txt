@@ -11,6 +11,8 @@ target_include_directories(AndGen_Engine_Tests
 	PRIVATE "${gtest_SOURCE_DIR}/include"
 	# Google Mock includes
 	PRIVATE "${gmock_SOURCE_DIR}/include"
+	# CTPL Engine dependency
+	PRIVATE "${CMAKE_CACHEFILE_DIR}/CTPL-src"
 	# AndGen includes
 	PUBLIC "${INCLUDE_DIR}"
 	PRIVATE "${SOURCE_DIR}"
@@ -21,6 +23,12 @@ target_include_directories(AndGen_Engine_Tests
 target_sources(AndGen_Engine_Tests 
 	# Add main engine unit tests
 	PRIVATE "${CMAKE_CURRENT_LIST_DIR}/CommandLineArgumentsTests.cpp"
+	# Job system unit tests
+	PRIVATE "${CMAKE_CURRENT_LIST_DIR}/Jobs/JobQueueTests.cpp"
+	PRIVATE "${CMAKE_CURRENT_LIST_DIR}/Jobs/JobTests.cpp"
+	# Add Concurrency unit tests
+	#PRIVATE "${CMAKE_CURRENT_LIST_DIR}/Concurrency/ThreadPoolTests.cpp"
+	PRIVATE "${CMAKE_CURRENT_LIST_DIR}/Concurrency/PooledThreadTests.cpp"
 	# Tests suit main
 	PUBLIC "${CMAKE_CURRENT_LIST_DIR}/main.cpp"
 )

@@ -20,9 +20,15 @@
           "name": "BUILD_EDITOR_TESTS",
           "value": "True",
           "type": "BOOL"
+        },
+        {
+          "name": "INSTALL_GTEST",
+          "value": "False",
+          "type": "BOOL"
         }
       ],
-      "cmakeExecutable": "C:/Program Files/CMake/bin/cmake.exe"
+      "cmakeExecutable": "C:/Program Files/CMake/bin/cmake.exe",
+      "intelliSenseMode": "windows-msvc-x64"
     }
   ]
 }
