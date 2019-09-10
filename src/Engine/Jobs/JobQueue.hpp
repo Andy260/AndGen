@@ -46,6 +46,18 @@ namespace AndGen
 		{
 			return static_cast<int>(m_jobQueue.size());
 		}
+		/// <summary>
+		/// Has the queue got no jobs?
+		/// </summary>
+		inline bool IsEmpty() const
+		{
+			return m_jobQueue.empty();
+		}
+
+		/// <summary>
+		/// Empties the queue
+		/// </summary>
+		void Clear();
 
 	private:
 		// Queue of jobs to execute

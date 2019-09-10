@@ -52,3 +52,14 @@ std::shared_ptr<AndGen::Job> AndGen::JobQueue::GetNextJob()
 
 	return nextJob;
 }
+
+// Empties the queue
+void AndGen::JobQueue::Clear()
+{
+	// Acquire lock on queue
+	std::scoped_lock<std::mutex> lock(m_jobQueue_mutex);
+
+	// Empty queue
+	std::queue<std::shared_ptr<Job>> emptyQueue;
+	m_jobQueue.swap(emptyQueue);
+}

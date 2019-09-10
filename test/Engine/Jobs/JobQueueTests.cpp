@@ -22,13 +22,24 @@ namespace AndGen
 			virtual void Execute() override {}
 		};
 
+		class TestHelper
+		{
+		public:
+			static std::shared_ptr<Job> CreateJob()
+			{
+				std::shared_ptr<Job> job;
+				job.reset(new TestJob);
+
+				return job;
+			}
+		};
+
 		// AddJob() normal usage
 		TEST(JobQueueTests, AddJob)
 		{
 			// Create Job Queue and test job
 			JobQueue jobQueue;
-			std::shared_ptr<Job> job;
-			job.reset(new TestJob);
+			std::shared_ptr<Job> job = TestHelper::CreateJob();
 			// Ensure Job Queue has expected values after creation
 			ASSERT_EQ(jobQueue.Count(), 0);
 
@@ -47,12 +58,9 @@ namespace AndGen
 			ASSERT_EQ(jobQueue.Count(), 0);
 
 			// Create Test jobs
-			std::shared_ptr<Job> firstJob;
-			firstJob.reset(new TestJob);
-			std::shared_ptr<Job> secondJob;
-			secondJob.reset(new TestJob);
-			std::shared_ptr<Job> thirdJob;
-			thirdJob.reset(new TestJob);
+			std::shared_ptr<Job> firstJob	= TestHelper::CreateJob();
+			std::shared_ptr<Job> secondJob	= TestHelper::CreateJob();
+			std::shared_ptr<Job> thirdJob	= TestHelper::CreateJob();
 
 			// Add test job to job queue with multiple threads
 			auto functor = [&jobQueue](std::shared_ptr<Job> job)
@@ -101,8 +109,7 @@ namespace AndGen
 		{
 			// Create Job Queue and test job
 			JobQueue jobQueue;
-			std::shared_ptr<Job> job;
-			job.reset(new TestJob);
+			std::shared_ptr<Job> job = TestHelper::CreateJob();
 			// Add test job to Job Queue
 			jobQueue.AddJob(job);
 
@@ -119,12 +126,9 @@ namespace AndGen
 		{
 			// Create Job Queue and test jobs
 			JobQueue jobQueue;
-			std::shared_ptr<Job> firstJob;
-			firstJob.reset(new TestJob);
-			std::shared_ptr<Job> secondJob;
-			secondJob.reset(new TestJob);
-			std::shared_ptr<Job> thirdJob;
-			thirdJob.reset(new TestJob);
+			std::shared_ptr<Job> firstJob	= TestHelper::CreateJob();
+			std::shared_ptr<Job> secondJob	= TestHelper::CreateJob();
+			std::shared_ptr<Job> thirdJob	= TestHelper::CreateJob();
 			// Add test jobs to Job Queue
 			jobQueue.AddJob(firstJob);
 			jobQueue.AddJob(secondJob);
@@ -169,6 +173,69 @@ namespace AndGen
 			jobQueue.ExecuteNextJob();
 			// Ensure job count doesn't change
 			ASSERT_EQ(jobQueue.Count(), 0);
+		}
+
+		// Clear() normal usage
+		TEST(JobQueueTests, Clear)
+		{
+			// Create Jobs
+			std::shared_ptr<Job> firstJob	= TestHelper::CreateJob();
+			std::shared_ptr<Job> secondJob	= TestHelper::CreateJob();
+
+			// Create Queue
+			AndGen::JobQueue jobQueue;
+
+			// Add jobs to queue
+			jobQueue.AddJob(firstJob);
+			jobQueue.AddJob(secondJob);
+			// Ensure queue has expected count
+			ASSERT_EQ(jobQueue.Count(), 2);
+
+			// Clear job queue
+			jobQueue.Clear();
+			// Ensure queue has expected count
+			ASSERT_EQ(jobQueue.Count(), 0);
+		}
+
+		// Clear() with no jobs
+		TEST(JobQueueTests, Clear_Empty)
+		{
+			// Create Job Queue
+			AndGen::JobQueue jobQueue;
+			// Ensure queue count is expected value on creation
+			ASSERT_EQ(jobQueue.Count(), 0);
+
+			// Ensure queue count is expected value after empting
+			jobQueue.Clear();
+			ASSERT_EQ(jobQueue.Count(), 0);
+		}
+
+		// IsEmpty() normal usage
+		TEST(JobQueueTests, IsEmpty)
+		{
+			// Create Jobs
+			std::shared_ptr<Job> firstJob = TestHelper::CreateJob();
+			std::shared_ptr<Job> secondJob = TestHelper::CreateJob();
+
+			// Create Queue
+			AndGen::JobQueue jobQueue;
+
+			// Add jobs to queue
+			jobQueue.AddJob(firstJob);
+			jobQueue.AddJob(secondJob);
+
+			// Ensure IsEmpty() is false
+			ASSERT_FALSE(jobQueue.IsEmpty());
+		}
+
+		// IsEmpty() with no jobs queued
+		TEST(JobQueueTests, IsEmpty_Empty)
+		{
+			// Create Job Queue
+			AndGen::JobQueue jobQueue;
+
+			// Ensure IsEmpty() is true
+			ASSERT_TRUE(jobQueue.IsEmpty());
 		}
 	}
 }
