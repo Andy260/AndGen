@@ -28,6 +28,7 @@ target_sources(AndGen_Engine_Tests
 	PRIVATE "${CMAKE_CURRENT_LIST_DIR}/Jobs/JobTests.cpp"
 	# Add Concurrency unit tests
 	#PRIVATE "${CMAKE_CURRENT_LIST_DIR}/Concurrency/ThreadPoolTests.cpp"
+	PRIVATE "${CMAKE_CURRENT_LIST_DIR}/Concurrency/ThreadNotifierTests.cpp"
 	PRIVATE "${CMAKE_CURRENT_LIST_DIR}/Concurrency/PooledThreadTests.cpp"
 	# Tests suit main
 	PUBLIC "${CMAKE_CURRENT_LIST_DIR}/main.cpp"
