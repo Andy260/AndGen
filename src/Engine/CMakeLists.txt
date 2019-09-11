@@ -21,6 +21,7 @@ target_sources(AndGen_Engine
 	# Add main engine source
 	PUBLIC "${CMAKE_CURRENT_LIST_DIR}/CommandLineArguments.cpp"
 	# Add Concurrency source files
+	PRIVATE "${CMAKE_CURRENT_LIST_DIR}/Concurrency/ThreadNotifier.cpp"
 	PRIVATE "${CMAKE_CURRENT_LIST_DIR}/Concurrency/PooledThread.cpp"
 	# Add Job System source files
 	PRIVATE "${CMAKE_CURRENT_LIST_DIR}/Jobs/Job.cpp"
