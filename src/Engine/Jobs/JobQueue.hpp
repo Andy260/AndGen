@@ -4,7 +4,7 @@
 // STL includes
 #include <memory>
 #include <mutex>
-#include <queue>
+#include <deque>
 
 namespace AndGen
 {
@@ -20,21 +20,30 @@ namespace AndGen
 		/// <summary>
 		/// Default constructor
 		/// </summary>
-		JobQueue()					= default;
+		JobQueue() = default;
 		/// <summary>
 		/// Copy constructor
 		/// </summary>
-		JobQueue(const JobQueue&)	= default;
+		JobQueue(const JobQueue& other)
+		{
+			m_jobQueue = other.m_jobQueue;
+		}
 		/// <summary>
 		/// Default de-constructor
 		/// </summary>
-		~JobQueue()					= default;
+		~JobQueue()	= default;
 
 		/// <summary>
 		/// Adds a job to the end of the queue
 		/// </summary>
 		/// <param name="job">Pointer to job, which will be added to the queue</param>
 		void AddJob(std::shared_ptr<Job> job);
+		/// <summary>
+		/// Adds all jobs for another queue into this queue
+		/// </summary>
+		/// <param name="jobQueue">Job Queue to add jobs from to this queue</param>
+		void AddJobQueue(const JobQueue& jobQueue);
+
 		/// <summary>
 		/// Executes the next job in the queue
 		/// </summary>
@@ -61,7 +70,7 @@ namespace AndGen
 
 	private:
 		// Queue of jobs to execute
-		std::queue<std::shared_ptr<Job>> m_jobQueue;
+		std::deque<std::shared_ptr<Job>> m_jobQueue;
 		// Mutex to ensure thread safety when accessing m_jobQueue
 		std::mutex m_jobQueue_mutex;
 

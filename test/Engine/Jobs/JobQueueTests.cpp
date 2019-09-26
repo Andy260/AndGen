@@ -2,6 +2,7 @@
 
 // STL includes
 #include <atomic>
+#include <functional>
 #include <memory>
 #include <thread>
 // Google Test includes
@@ -19,7 +20,13 @@ namespace AndGen
 			TestJob() : Job() {}
 			virtual ~TestJob() override {}
 
-			virtual void Execute() override {}
+			virtual void Execute() override final
+			{
+				// Record execution time
+				executionTime = std::chrono::high_resolution_clock::now();
+			}
+
+			std::chrono::high_resolution_clock::time_point executionTime;
 		};
 
 		class TestHelper
@@ -31,6 +38,19 @@ namespace AndGen
 				job.reset(new TestJob);
 
 				return job;
+			}
+
+			static JobQueue CreateQueue(size_t jobsCount)
+			{
+				AndGen::JobQueue jobQueue;
+
+				for (size_t i = 0; i < jobsCount; i++)
+				{
+					std::shared_ptr<Job> job = CreateJob();
+					jobQueue.AddJob(job);
+				}
+
+				return jobQueue;
 			}
 		};
 
@@ -91,7 +111,7 @@ namespace AndGen
 		}
 
 		// AddJob() with a null pointer
-		TEST(JobQueueTests, AddJobNull)
+		TEST(JobQueueTests, AddJob_Null)
 		{
 			// Create Job Queue and test job
 			JobQueue jobQueue;
@@ -104,35 +124,117 @@ namespace AndGen
 			ASSERT_EQ(jobQueue.Count(), 0);
 		}
 
-		// ExecuteNextJob() normal usage
-		TEST(JobQueueTests, ExecuteNextJob)
+		// AddJobQueue() normal usage
+		TEST(JobQueueTests, AddJobQueue)
 		{
 			// Create Job Queue and test job
 			JobQueue jobQueue;
-			std::shared_ptr<Job> job = TestHelper::CreateJob();
-			// Add test job to Job Queue
-			jobQueue.AddJob(job);
+			// Ensure Job Queue has expected values after creation
+			ASSERT_EQ(jobQueue.Count(), 0);
+
+			// Create Job Queue to add
+			JobQueue queueToAdd = TestHelper::CreateQueue(2);
+			// Add recently created queue to Job Queue
+			jobQueue.AddJobQueue(queueToAdd);
+
+			// Ensure job queue has expected count
+			ASSERT_EQ(jobQueue.Count(), queueToAdd.Count());
+		}
+
+		// AddJobQueue() normal usage with multiple threads
+		TEST(JobQueueTests, AddJobQueue_Threaded)
+		{
+			// Create Job Queue
+			JobQueue jobQueue;
+			// Ensure Job Queue has expected values after creation
+			ASSERT_EQ(jobQueue.Count(), 0);
+
+			// Add job queues with threads
+			auto functor = [&jobQueue] 
+			{
+				// Create queue to add
+				JobQueue queueToAdd = TestHelper::CreateQueue(2);
+				// Add queue
+				jobQueue.AddJobQueue(queueToAdd);
+			};
+			std::thread firstThread(functor);
+			std::thread secondThread(functor);
+
+			// Wait for threads to complete
+			if (firstThread.joinable())
+			{
+				firstThread.join();
+			}
+			if (secondThread.joinable())
+			{
+				secondThread.join();
+			}
+
+			// Ensure job queue has expected job count
+			ASSERT_EQ(jobQueue.Count(), 4);
+		}
+
+		// AddJobQueue() with an empty job queue
+		TEST(JobQueueTests, AddJobQueue_Empty)
+		{
+			// Create Job Queue and test job
+			JobQueue jobQueue;
+			// Ensure Job Queue has expected values after creation
+			ASSERT_EQ(jobQueue.Count(), 0);
+
+			// Create empty queue and attempt to add it
+			JobQueue emptyQueue;
+			jobQueue.AddJobQueue(emptyQueue);
+
+			// Ensure job queue count is as expected
+			ASSERT_EQ(jobQueue.Count(), 0);
+		}
+
+		// ExecuteNextJob() normal usage with AddJob() providing input
+		TEST(JobQueueTests, ExecuteNextJob_AddJob)
+		{
+			// Create Job Queue and test jobs
+			JobQueue jobQueue;
+			std::shared_ptr<TestJob> firstJob	= std::make_shared<TestJob>();
+			std::shared_ptr<TestJob> secondJob	= std::make_shared<TestJob>();
+			std::shared_ptr<TestJob> thirdJob	= std::make_shared<TestJob>();
+			// Add test jobs to Job Queue
+			jobQueue.AddJob(std::dynamic_pointer_cast<Job>(firstJob));
+			jobQueue.AddJob(std::dynamic_pointer_cast<Job>(secondJob));
+			jobQueue.AddJob(std::dynamic_pointer_cast<Job>(thirdJob));
 
 			// Execute job queue on worker thread
 			// and wait for thread to finish
 			jobQueue.ExecuteNextJob();
+			jobQueue.ExecuteNextJob();
+			jobQueue.ExecuteNextJob();
 
-			// Ensure job was completed
-			ASSERT_TRUE(job->IsCompleted());
+			// Ensure jobs were completed
+			ASSERT_TRUE(firstJob->IsCompleted());
+			ASSERT_TRUE(secondJob->IsCompleted());
+			ASSERT_TRUE(thirdJob->IsCompleted());
+			// Ensure jobs were completed in expected order
+			ASSERT_TRUE(firstJob->executionTime < secondJob->executionTime &&
+				firstJob->executionTime < thirdJob->executionTime);
+			ASSERT_TRUE(secondJob->executionTime > firstJob->executionTime&&
+				secondJob->executionTime < thirdJob->executionTime);
+			ASSERT_TRUE(thirdJob->executionTime > firstJob->executionTime&&
+				thirdJob->executionTime > secondJob->executionTime);
 		}
 
-		// ExecuteNextJob() normal usage with multiple threads
-		TEST(JobQueueTests, ExecuteNextJob_Threaded)
+		// ExecuteNextJob() normal usage with AddJob() providing input
+		// and with multiple thread execution
+		TEST(JobQueueTests, ExecuteNextJob_AddJob_Threaded)
 		{
 			// Create Job Queue and test jobs
 			JobQueue jobQueue;
-			std::shared_ptr<Job> firstJob	= TestHelper::CreateJob();
-			std::shared_ptr<Job> secondJob	= TestHelper::CreateJob();
-			std::shared_ptr<Job> thirdJob	= TestHelper::CreateJob();
+			std::shared_ptr<TestJob> firstJob	= std::make_shared<TestJob>();
+			std::shared_ptr<TestJob> secondJob	= std::make_shared<TestJob>();
+			std::shared_ptr<TestJob> thirdJob	= std::make_shared<TestJob>();
 			// Add test jobs to Job Queue
-			jobQueue.AddJob(firstJob);
-			jobQueue.AddJob(secondJob);
-			jobQueue.AddJob(thirdJob);
+			jobQueue.AddJob(std::dynamic_pointer_cast<Job>(firstJob));
+			jobQueue.AddJob(std::dynamic_pointer_cast<Job>(secondJob));
+			jobQueue.AddJob(std::dynamic_pointer_cast<Job>(thirdJob));
 
 			// Execute job queue on multiple threads
 			auto functor = [&jobQueue]()
@@ -161,6 +263,99 @@ namespace AndGen
 			ASSERT_TRUE(firstJob->IsCompleted());
 			ASSERT_TRUE(secondJob->IsCompleted());
 			ASSERT_TRUE(thirdJob->IsCompleted());
+			// Ensure jobs were completed in expected order
+			ASSERT_TRUE(firstJob->executionTime < secondJob->executionTime &&
+				firstJob->executionTime < thirdJob->executionTime);
+			ASSERT_TRUE(secondJob->executionTime > firstJob->executionTime&&
+				secondJob->executionTime < thirdJob->executionTime);
+			ASSERT_TRUE(thirdJob->executionTime > firstJob->executionTime&&
+				thirdJob->executionTime > secondJob->executionTime);
+		}
+
+		// ExecuteNextJob() normal usage with AddJob() providing input
+		TEST(JobQueueTests, ExecuteNextJob_AddJob)
+		{
+			// Create Job Queue and test jobs
+			JobQueue jobQueue, queueToAdd;
+			std::shared_ptr<TestJob> firstJob	= std::make_shared<TestJob>();
+			std::shared_ptr<TestJob> secondJob	= std::make_shared<TestJob>();
+			std::shared_ptr<TestJob> thirdJob	= std::make_shared<TestJob>();
+			// Add test jobs to Job Queue to be added
+			queueToAdd.AddJob(std::dynamic_pointer_cast<Job>(firstJob));
+			queueToAdd.AddJob(std::dynamic_pointer_cast<Job>(secondJob));
+			queueToAdd.AddJob(std::dynamic_pointer_cast<Job>(thirdJob));
+			// Add job queue to queue which to test
+			jobQueue.AddJobQueue(queueToAdd);
+
+			// Execute job queue on worker thread
+			// and wait for thread to finish
+			jobQueue.ExecuteNextJob();
+			jobQueue.ExecuteNextJob();
+			jobQueue.ExecuteNextJob();
+
+			// Ensure jobs were completed
+			ASSERT_TRUE(firstJob->IsCompleted());
+			ASSERT_TRUE(secondJob->IsCompleted());
+			ASSERT_TRUE(thirdJob->IsCompleted());
+			// Ensure jobs were completed in expected order
+			ASSERT_TRUE(firstJob->executionTime < secondJob->executionTime &&
+				firstJob->executionTime < thirdJob->executionTime);
+			ASSERT_TRUE(secondJob->executionTime > firstJob->executionTime&&
+				secondJob->executionTime < thirdJob->executionTime);
+			ASSERT_TRUE(thirdJob->executionTime > firstJob->executionTime&&
+				thirdJob->executionTime > secondJob->executionTime);
+		}
+
+		// ExecuteNextJob() normal usage with AddJob() providing input
+		// and with multiple thread execution
+		TEST(JobQueueTests, ExecuteNextJob_AddJob_Threaded)
+		{
+			// Create Job Queue and test jobs
+			JobQueue jobQueue, queueToAdd;
+			std::shared_ptr<TestJob> firstJob	= std::make_shared<TestJob>();
+			std::shared_ptr<TestJob> secondJob	= std::make_shared<TestJob>();
+			std::shared_ptr<TestJob> thirdJob	= std::make_shared<TestJob>();
+			// Add test jobs to Job Queue to be added
+			queueToAdd.AddJob(std::dynamic_pointer_cast<Job>(firstJob));
+			queueToAdd.AddJob(std::dynamic_pointer_cast<Job>(secondJob));
+			queueToAdd.AddJob(std::dynamic_pointer_cast<Job>(thirdJob));
+			// Add queue to be added to test job queue
+			jobQueue.AddJobQueue(queueToAdd);
+
+			// Execute job queue on multiple threads
+			auto functor = [&jobQueue]()
+			{
+				jobQueue.ExecuteNextJob();
+			};
+			// Start threads
+			std::thread firstThread(functor);
+			std::thread secondThread(functor);
+			std::thread thirdThread(functor);
+			// Wait for threads to complete
+			if (firstThread.joinable())
+			{
+				firstThread.join();
+			}
+			if (secondThread.joinable())
+			{
+				secondThread.join();
+			}
+			if (thirdThread.joinable())
+			{
+				thirdThread.join();
+			}
+
+			// Ensure all jobs were completed
+			ASSERT_TRUE(firstJob->IsCompleted());
+			ASSERT_TRUE(secondJob->IsCompleted());
+			ASSERT_TRUE(thirdJob->IsCompleted());
+			// Ensure jobs were completed in expected order
+			ASSERT_TRUE(firstJob->executionTime < secondJob->executionTime &&
+				firstJob->executionTime < thirdJob->executionTime);
+			ASSERT_TRUE(secondJob->executionTime > firstJob->executionTime&&
+				secondJob->executionTime < thirdJob->executionTime);
+			ASSERT_TRUE(thirdJob->executionTime > firstJob->executionTime&&
+				thirdJob->executionTime > secondJob->executionTime);
 		}
 
 		// ExecuteNextJob() with no jobs
@@ -214,8 +409,8 @@ namespace AndGen
 		TEST(JobQueueTests, IsEmpty)
 		{
 			// Create Jobs
-			std::shared_ptr<Job> firstJob = TestHelper::CreateJob();
-			std::shared_ptr<Job> secondJob = TestHelper::CreateJob();
+			std::shared_ptr<Job> firstJob	= TestHelper::CreateJob();
+			std::shared_ptr<Job> secondJob	= TestHelper::CreateJob();
 
 			// Create Queue
 			AndGen::JobQueue jobQueue;
