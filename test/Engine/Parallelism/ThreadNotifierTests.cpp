@@ -1,4 +1,4 @@
-#include <Engine/Concurrency/ThreadNotifier.hpp>
+#include <Engine/Parallelism/ThreadNotifier.hpp>
 
 // STL includes
 #include <thread>
