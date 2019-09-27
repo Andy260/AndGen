@@ -3,32 +3,30 @@
 // Google Test includes
 #include <gtest/gtest.h>
 
-namespace AndGen
+namespace AndGen::Tests
 {
-	namespace UnitTests
+	class TestJob : public Job
 	{
-		class TestJob : public Job
+	public:
+		TestJob() : Job() {}
+		TestJob(const TestJob&) = default;
+		~TestJob() = default;
+
+		bool executeWasRan = false;
+
+	protected:
+		virtual void Execute() override
 		{
-		public: 
-			TestJob() : Job() {}
-			TestJob(const TestJob&) = default;
-			~TestJob()				= default;
-			
-			bool executeWasRan = false;
-
-		protected:
-			virtual void Execute() override
-			{
-				executeWasRan = true;
-			}
-		};
-
-		TEST(JobTests, Run)
-		{
-			TestJob testJob;
-			testJob.Run();
-
-			ASSERT_TRUE(testJob.IsCompleted());
+			executeWasRan = true;
 		}
+	};
+
+	// Normal usage of Run()
+	TEST(JobTests, Run)
+	{
+		TestJob testJob;
+		testJob.Run();
+
+		ASSERT_TRUE(testJob.IsCompleted());
 	}
 }
