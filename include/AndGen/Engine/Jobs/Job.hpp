@@ -53,7 +53,7 @@ namespace AndGen
 		/// <summary>
 		/// Constructs a new job
 		/// </summary>
-		Job()			= default;
+		Job() : m_isCompleted(false) {}
 		Job(const Job&) = delete;
 
 		/// <summary>
