@@ -30,7 +30,7 @@ namespace AndGen
 		/// and <see cref="Start"/> will need to be called afterwards
 		/// in order for the thread to be executing.
 		/// </remarks>
-		PooledThread() : m_shouldExit(false), m_isRunning(false) {}
+		PooledThread() : m_shouldExit(false), m_isRunning(false), m_isExecuting(false) {}
 		PooledThread(const PooledThread&) = delete;
 		/// <summary>
 		/// Destroys this pooled thread
@@ -47,6 +47,25 @@ namespace AndGen
 		}
 
 		/// <summary>
+		/// Represents the current status of a <see cref="PooledThread"/>
+		/// </summary>
+		enum class Status
+		{
+			/// <summary>
+			/// Currently executing jobs in the queue
+			/// </summary>
+			ExecutingJobs,
+			/// <summary>
+			/// Is not running, and not executing jobs
+			/// </summary>
+			Stopped,
+			/// <summary>
+			/// Is running, but not executing any jobs
+			/// </summary>
+			Idle
+		};
+
+		/// <summary>
 		/// The currently executing job queue
 		/// </summary>
 		/// <returns>Reference to thread's job queue</returns>
@@ -58,15 +77,31 @@ namespace AndGen
 		/// <summary>
 		/// Is this pooled thread currently executing?
 		/// </summary>
-		inline bool IsRunning() const
+		inline Status GetStatus() const
 		{
-			return m_isRunning;
+			if (m_isRunning)
+			{
+				if (m_isExecuting)
+				{
+					return Status::ExecutingJobs;
+				}
+				else
+				{
+					return Status::Idle;
+				}
+			}
+			else
+			{
+				// Thread is not running
+				return Status::Stopped;
+			}
 		}
 
 		/// <summary>
 		/// Begins thread execution
 		/// </summary>
 		void Start();
+
 		/// <summary>
 		/// Stops thread execution
 		/// </summary>
@@ -113,11 +148,12 @@ namespace AndGen
 		std::atomic_bool m_shouldExit;
 		// Allows for checking if the thread is currently running
 		std::atomic_bool m_isRunning;
+		// Is the thread currently executing a job?
+		std::atomic_bool m_isExecuting;
 
 		// Blocks internal thread execution when no jobs are to be completed
 		// or application is shutting down, and only currently executing job should be executed
 		AndGen::ThreadNotifier m_jobsReadyNotification;
-
 		// Blocks calling threads of WaitForQueue() until all jobs in queue are completed
 		AndGen::ThreadNotifier m_jobsCompleteNotification;
 

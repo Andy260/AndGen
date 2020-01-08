@@ -14,10 +14,10 @@ void AndGen::PooledThread::Start()
 		return;
 	}
 
-	m_shouldExit	= false;
+	m_shouldExit = false;
 	// Thread running flag set here, in case threads check immediately if this thread is running
 	// before first line of the internal thread gets to run
-	m_isRunning		= true;
+	m_isRunning	= true;
 
 	// Start thread
 	m_thread = std::thread(&PooledThread::ExecutionLoop, this);
@@ -47,7 +47,9 @@ void AndGen::PooledThread::Stop(bool waitForThread)
 void AndGen::PooledThread::WaitForQueue()
 {
 	// Ignore call if queue is empty
-	if (m_jobQueue.Count() <= 0)
+	// or thread isn't running
+	if (m_jobQueue.Count() <= 0 ||
+		!m_isRunning)
 	{
 		return;
 	}
@@ -64,6 +66,7 @@ void AndGen::PooledThread::ExecutionLoop()
 		// Execute the next job in the queue if there's any left
 		if (m_jobQueue.Count() > 0)
 		{
+			m_isExecuting = true;
 			m_jobQueue.ExecuteNextJob();
 		}
 
@@ -73,6 +76,7 @@ void AndGen::PooledThread::ExecutionLoop()
 			m_jobsCompleteNotification.Notify();
 
 			// Wait for jobs to be added to the queue
+			m_isExecuting = false;
 			m_jobsReadyNotification.Wait();
 		}
 	}

@@ -60,7 +60,7 @@ std::shared_ptr<AndGen::Job> AndGen::JobQueue::GetNextJob()
 	// Return null pointer if no jobs are left
 	if (m_jobQueue.size() <= 0)
 	{
-		return nullptr;
+		return static_cast<std::shared_ptr<AndGen::Job>>(nullptr);
 	}
 
 	// Acquire lock on queue

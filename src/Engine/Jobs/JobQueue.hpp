@@ -51,9 +51,9 @@ namespace AndGen
 		/// <summary>
 		/// Amount of jobs left in the queue
 		/// </summary>
-		inline int Count() const
+		inline size_t Count() const
 		{
-			return static_cast<int>(m_jobQueue.size());
+			return m_jobQueue.size();
 		}
 		/// <summary>
 		/// Has the queue got no jobs?
