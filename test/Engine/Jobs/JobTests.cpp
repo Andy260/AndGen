@@ -24,9 +24,15 @@ namespace AndGen::Tests
 	// Normal usage of Run()
 	TEST(JobTests, Run)
 	{
-		TestJob testJob;
-		testJob.Run();
+		std::shared_ptr<TestJob> testJob = std::make_shared<TestJob>();
 
-		ASSERT_TRUE(testJob.IsCompleted());
+		// Ensure job isn't flagged as completed before execution
+		ASSERT_FALSE(testJob->IsCompleted());
+
+		// Execute job
+		testJob->Run();
+
+		// Ensure job is flagged as completed after execution
+		ASSERT_TRUE(testJob->IsCompleted());
 	}
 }

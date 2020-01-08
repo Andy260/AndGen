@@ -5,57 +5,76 @@
 #include <memory>
 // AndGen includes
 #include <AndGen/Engine/Jobs/Job.hpp>
+// AndGen test includes
+#include "TimedJob.hpp"
 // Google Test includes
 #include <gtest/gtest.h>
 
 namespace AndGen::Tests
 {
-	class TestJob : public Job
+	/// <summary>
+	/// Test fixture, which controls clean-up of created resources within tests
+	/// </summary>
+	class PooledThreadTests : public ::testing::Test
 	{
-	public:
-		TestJob() : canExecute(false) {}
-		TestJob(const TestJob&) = default;
-		~TestJob() = default;
+	protected:
+		static std::vector<std::shared_ptr<TimedJob>> m_jobs;
+		static std::unique_ptr<PooledThread> m_pooledThread;
 
-		std::atomic_bool canExecute;
-
-		std::chrono::high_resolution_clock::time_point startOfExecution;
-		std::chrono::high_resolution_clock::time_point endOfExecution;
-
-	private:
-		virtual void Execute() override
+		/// <summary>
+		/// Per-test Tear Down
+		/// </summary>
+		virtual void TearDown() override final
 		{
-			// Record execution start time
-			startOfExecution = std::chrono::high_resolution_clock::now();
+			// Ensure all created tests will finish executing
+			for (size_t i = 0; i < m_jobs.size(); i++)
+			{
+				m_jobs[i]->canExecute = true;
+			}
+			m_jobs.clear();
 
-			// Wait until we can execute
-			while (!canExecute) {}
+			// Destroy pooled thread
+			delete m_pooledThread.release();
+		}
 
-			// Record execution finish time
-			endOfExecution = std::chrono::high_resolution_clock::now();
+		/// <summary>
+		/// Creates a job which will be cleaned up after test case execution
+		/// </summary>
+		/// <returns>
+		/// Created Job
+		/// </returns>
+		static std::shared_ptr<TimedJob> CreateJob()
+		{
+			std::shared_ptr<TimedJob> job = std::make_shared<TimedJob>();
+			m_jobs.push_back(job);
+
+			return job;
 		}
 	};
+	std::vector<std::shared_ptr<TimedJob>> PooledThreadTests::m_jobs;
+	std::unique_ptr<PooledThread> PooledThreadTests::m_pooledThread;
 
 	// Normal usage of QueueJob()
-	TEST(PooledThreadTests, QueueJob)
+	TEST_F(PooledThreadTests, QueueJob)
 	{
-		// Create Jobs to execute
-		std::shared_ptr<TestJob> firstJob = std::make_shared<TestJob>();
-		std::shared_ptr<TestJob> secondJob = std::make_shared<TestJob>();
-		// Ensure Jobs execute
-		firstJob->canExecute = true;
-		secondJob->canExecute = true;
 		// Create Pooled Thread
-		AndGen::PooledThread pooledThread;
+		m_pooledThread = std::make_unique<PooledThread>();
+
+		// Create Jobs to execute
+		std::shared_ptr<TimedJob> firstJob	= CreateJob();
+		std::shared_ptr<TimedJob> secondJob = CreateJob();
+		// Ensure Jobs execute
+		firstJob->canExecute	= true;
+		secondJob->canExecute	= true;
 
 		// Queue test jobs
-		pooledThread.QueueJob<TestJob>(firstJob);
-		pooledThread.QueueJob<TestJob>(secondJob);
-		pooledThread.Start();
+		m_pooledThread->QueueJob<TimedJob>(firstJob);
+		m_pooledThread->QueueJob<TimedJob>(secondJob);
+		m_pooledThread->Start();
 
 		// Wait for pooled thread to execute
-		pooledThread.WaitForQueue();
-		pooledThread.Stop(true);
+		m_pooledThread->WaitForQueue();
+		m_pooledThread->Stop(true);
 
 		// Ensure test jobs are completed
 		ASSERT_TRUE(firstJob->IsCompleted());
@@ -65,154 +84,220 @@ namespace AndGen::Tests
 	}
 
 	// QueueJob() with a null job
-	TEST(PooledThreadTests, QueueJob_Null)
+	TEST_F(PooledThreadTests, QueueJob_Null)
 	{
 		// Create Pooled Thread
-		AndGen::PooledThread pooledThread;
+		m_pooledThread = std::make_unique<PooledThread>();
+
 		// Attempt to queue null job
-		pooledThread.QueueJob<TestJob>(std::shared_ptr<TestJob>(nullptr));
+		m_pooledThread->QueueJob<TimedJob>(std::shared_ptr<TimedJob>(nullptr));
 
 		// Ensure null job wasn't queued
-		ASSERT_EQ(pooledThread.GetQueue().Count(), 0);
+		ASSERT_EQ(m_pooledThread->GetQueue().Count(), 0);
 	}
 
 	// Normal usage of Start()
-	TEST(PooledThreadTests, Start)
+	TEST_F(PooledThreadTests, Start)
 	{
-		// Create pooled thread
-		AndGen::PooledThread pooledThread;
+		// Create Pooled Thread
+		m_pooledThread = std::make_unique<PooledThread>();
 		// Start pooled thread
-		pooledThread.Start();
+		m_pooledThread->Start();
 
 		// Give enough time for thread to start
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		// Ensure pooled thread is running
-		ASSERT_TRUE(pooledThread.IsRunning());
+		ASSERT_EQ(m_pooledThread->GetStatus(), AndGen::PooledThread::Status::Idle);
 	}
 
 	// Usage of Start() when thread is already running
-	TEST(PooledThreadTests, Start_AlreadyRunning)
+	TEST_F(PooledThreadTests, Start_AlreadyRunning)
 	{
-		// Create pooled thread
-		AndGen::PooledThread pooledThread;
+		// Create Pooled Thread
+		m_pooledThread = std::make_unique<PooledThread>();
 		// Start pooled thread
-		pooledThread.Start();
+		m_pooledThread->Start();
 
 		// Give enough time for thread to start
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		// Ensure pooled thread is running
-		ASSERT_TRUE(pooledThread.IsRunning());
+		ASSERT_EQ(m_pooledThread->GetStatus(), AndGen::PooledThread::Status::Idle);
 
 		// Attempt to start pooled thread when already running
-		pooledThread.Start();
+		m_pooledThread->Start();
 		// Ensure pooled thread is still running
-		ASSERT_TRUE(pooledThread.IsRunning());
+		ASSERT_EQ(m_pooledThread->GetStatus(), AndGen::PooledThread::Status::Idle);
 	}
 
 	// Normal usage of Stop()
-	TEST(PooledThreadTests, Stop)
+	TEST_F(PooledThreadTests, Stop)
 	{
-		// Create pooled thread
-		AndGen::PooledThread pooledThread;
+		// Create Pooled Thread
+		m_pooledThread = std::make_unique<PooledThread>();
 		// Start pooled thread
-		pooledThread.Start();
+		m_pooledThread->Start();
 
 		// Give enough time for thread to start
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		// Ensure pooled thread is running
-		ASSERT_TRUE(pooledThread.IsRunning());
+		ASSERT_EQ(m_pooledThread->GetStatus(), AndGen::PooledThread::Status::Idle);
 
 		// Stop pooled thread
-		pooledThread.Stop(true);
+		m_pooledThread->Stop(true);
 		// Give enough time for thread to stop
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		// Ensure pooled thread has stopped
-		ASSERT_FALSE(pooledThread.IsRunning());
+		ASSERT_EQ(m_pooledThread->GetStatus(), AndGen::PooledThread::Status::Stopped);
 	}
 
 	// Usage of Stop() when thread isn't running
-	TEST(PooledThreadTests, Stop_NotRunning)
+	TEST_F(PooledThreadTests, Stop_NotRunning)
 	{
-		// Create pooled thread
-		AndGen::PooledThread pooledThread;
+		// Create Pooled Thread
+		m_pooledThread = std::make_unique<PooledThread>();
 
 		// Attempt to stop thread when not running
-		pooledThread.Stop(true);
+		m_pooledThread->Stop(true);
 
 		// Ensure thread isn't running
-		ASSERT_FALSE(pooledThread.IsRunning());
+		ASSERT_EQ(m_pooledThread->GetStatus(), AndGen::PooledThread::Status::Stopped);
 	}
 
 	// Normal usage of WaitForQueue()
-	TEST(PooledThreadTests, WaitForQueue)
+	TEST_F(PooledThreadTests, WaitForQueue)
 	{
+		// Create Pooled Thread
+		m_pooledThread = std::make_unique<PooledThread>();
+
 		// Create Jobs to execute
-		std::shared_ptr<TestJob> job = std::make_shared<TestJob>();
+		std::shared_ptr<TimedJob> job = CreateJob();
 		// Ensure Jobs execute
 		job->canExecute = true;
-		// Create Pooled Thread
-		AndGen::PooledThread pooledThread;
 
 		// Queue test jobs
-		pooledThread.QueueJob<TestJob>(job);
-		pooledThread.Start();
+		m_pooledThread->QueueJob<TimedJob>(job);
+		m_pooledThread->Start();
 		// Ensure jobs were added to queue
-		ASSERT_EQ(pooledThread.GetQueue().Count(), 1);
+		ASSERT_EQ(m_pooledThread->GetQueue().Count(), 1);
 
 		// Wait for pooled thread to execute
-		pooledThread.WaitForQueue();
+		m_pooledThread->WaitForQueue();
 
 		// Ensure thread has completed all jobs
-		ASSERT_EQ(pooledThread.GetQueue().Count(), 0);
+		ASSERT_EQ(m_pooledThread->GetQueue().Count(), 0);
 	}
 
 	// Usage of WaitForQueue() with an empty queue
-	TEST(PooledThreadTests, WaitForQueue_Empty)
+	TEST_F(PooledThreadTests, WaitForQueue_Empty)
 	{
-		// Create pooled thread
-		AndGen::PooledThread pooledThread;
+		// Create Pooled Thread
+		m_pooledThread = std::make_unique<PooledThread>();
 		// Start thread
-		pooledThread.Start();
+		m_pooledThread->Start();
 
 		// Wait for queue with no jobs
-		pooledThread.WaitForQueue();
+		m_pooledThread->WaitForQueue();
+	}
+
+	// Usage of WaitForQueue() with thread not started
+	TEST_F(PooledThreadTests, WaitForQueue_NotStarted)
+	{
+		// Create Pooled Thread
+		m_pooledThread = std::make_unique<PooledThread>();
+
+		// Create Jobs to execute
+		std::shared_ptr<TimedJob> job = CreateJob();
+		// Ensure Jobs execute
+		job->canExecute = true;
+
+		// Queue test jobs
+		m_pooledThread->QueueJob<TimedJob>(job);
+		// Ensure jobs were added to queue
+		ASSERT_EQ(m_pooledThread->GetQueue().Count(), 1);
+
+		// Wait for pooled thread to execute
+		m_pooledThread->WaitForQueue();
+
+		// Ensure thread hasn't completed all jobs
+		// since the thread isn't started yet
+		ASSERT_EQ(m_pooledThread->GetQueue().Count(), 1);
 	}
 
 	// Normal usage of ClearQueue()
-	TEST(PooledThreadTests, ClearQueue)
+	TEST_F(PooledThreadTests, ClearQueue)
 	{
 		// Create pooled thread
-		AndGen::PooledThread pooledThread;
+		m_pooledThread = std::make_unique<PooledThread>();
 		// Ensure queue is empty
-		ASSERT_EQ(pooledThread.GetQueue().Count(), 0);
+		ASSERT_EQ(m_pooledThread->GetQueue().Count(), 0);
 
 		// Create jobs
-		std::shared_ptr<TestJob> firstJob = std::make_shared<TestJob>();
-		std::shared_ptr<TestJob> secondJob = std::make_shared<TestJob>();
+		std::shared_ptr<TimedJob> firstJob	= std::make_shared<TimedJob>();
+		std::shared_ptr<TimedJob> secondJob = std::make_shared<TimedJob>();
 		// Add jobs to queue
-		pooledThread.QueueJob<TestJob>(firstJob);
-		pooledThread.QueueJob<TestJob>(secondJob);
+		m_pooledThread->QueueJob<TimedJob>(firstJob);
+		m_pooledThread->QueueJob<TimedJob>(secondJob);
 		// Ensure jobs are added to queue
-		ASSERT_EQ(pooledThread.GetQueue().Count(), 2);
+		ASSERT_EQ(m_pooledThread->GetQueue().Count(), 2);
 
 		// Clear queue
-		pooledThread.ClearQueue();
+		m_pooledThread->ClearQueue();
 
 		// Ensure queue is empty
-		ASSERT_EQ(pooledThread.GetQueue().Count(), 0);
+		ASSERT_EQ(m_pooledThread->GetQueue().Count(), 0);
 	}
 
 	// Usage of ClearQueue with an empty queue
-	TEST(PooledThreadTests, ClearQueue_Empty)
+	TEST_F(PooledThreadTests, ClearQueue_Empty)
 	{
 		// Create pooled thread
-		AndGen::PooledThread pooledThread;
+		m_pooledThread = std::make_unique<PooledThread>();
 		// Ensure queue is empty
-		ASSERT_EQ(pooledThread.GetQueue().Count(), 0);
+		ASSERT_EQ(m_pooledThread->GetQueue().Count(), 0);
 
 		// Clear queue
-		pooledThread.ClearQueue();
+		m_pooledThread->ClearQueue();
 		// Ensure queue is still empty
-		ASSERT_EQ(pooledThread.GetQueue().Count(), 0);
+		ASSERT_EQ(m_pooledThread->GetQueue().Count(), 0);
+	}
+
+	// GetStatus() with thread idle
+	TEST_F(PooledThreadTests, GetStatus_Idle)
+	{
+		// Create thread and start it
+		m_pooledThread = std::make_unique<PooledThread>();
+		m_pooledThread->Start();
+
+		// Ensure status of thread is as expected
+		ASSERT_EQ(m_pooledThread->GetStatus(), PooledThread::Status::Idle);
+	}
+
+	// GetStatus() with thread executing jobs
+	TEST_F(PooledThreadTests, GetStatus_ExecutingJobs)
+	{
+		// Create thread and start it
+		m_pooledThread = std::make_unique<PooledThread>();
+		m_pooledThread->Start();
+
+		// Create job and begin executing it within the thread
+		std::shared_ptr<TimedJob> job	= CreateJob();
+		job->canExecute					= false;
+		m_pooledThread->QueueJob(job);
+
+		// Wait for thread to begin executing the job
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+
+		// Ensure status of thread is as expected
+		ASSERT_EQ(m_pooledThread->GetStatus(), PooledThread::Status::ExecutingJobs);
+	}
+
+	// GetStatus() with thread stopped
+	TEST_F(PooledThreadTests, GetStatus_Stopped)
+	{
+		// Create thread
+		m_pooledThread = std::make_unique<PooledThread>();
+
+		// Ensure status of thread is as expected
+		ASSERT_EQ(m_pooledThread->GetStatus(), PooledThread::Status::Stopped);
 	}
 }
